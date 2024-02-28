@@ -3,3 +3,5 @@ numpy
 scikit-learn
 matplotlib
 streamlit
+opencv-python-headless
+mesa-utils
