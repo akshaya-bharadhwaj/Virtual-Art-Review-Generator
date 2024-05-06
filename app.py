@@ -12,6 +12,9 @@ import base64
 import traceback
 
 
+
+
+
 def analyze_composition(uploaded_file_comp):
     # Read the image
     if uploaded_file_comp is not None:
@@ -64,13 +67,14 @@ def analyze_composition(uploaded_file_comp):
                 feedback = "Your composition is well-balanced and follows the rule of thirds."
             else:
                 feedback = "Consider adjusting the composition to align with the rule of thirds for a more balanced look."
+
             # Symmetry detection
             symmetry_feedback= detect_symmetry(image)
-            feedback += "\n" + symmetry_feedback
+            feedback += "\n\nSymmetry:\n" + symmetry_feedback
             
             # Balance detection
             balance_feedback = detect_balance(image)
-            feedback += "\n" + balance_feedback
+            feedback += "\n\nBalance:\n" + balance_feedback
 
             return feedback
 
@@ -78,6 +82,8 @@ def analyze_composition(uploaded_file_comp):
             return "No contours found. Please choose an image with clear visual elements."
     else:
         return "No image file uploaded. Please choose an image for composition analysis."
+
+
     
 
 def detect_symmetry(image):
@@ -105,13 +111,13 @@ def detect_symmetry(image):
 
         # Determine the strength of symmetry based on the number of detected lines
         if len(horizontal_lines) > 1 and len(vertical_lines) > 1:
-            return "Symmetry: Strong bilateral symmetry detected. The composition exhibits a high degree of balance and visual harmony, with prominent symmetrical elements enhancing its aesthetic appeal."
+            return "Strong bilateral symmetry detected. The composition exhibits a high degree of balance and visual harmony, with prominent symmetrical elements enhancing its aesthetic appeal."
         elif len(horizontal_lines) == 1 or len(vertical_lines) == 1:
-            return "Symmetry: Moderate symmetry detected. While some symmetrical elements are present, further adjustments may be needed to achieve optimal balance and visual coherence."
+            return "Moderate symmetry detected. While some symmetrical elements are present, further adjustments may be needed to achieve optimal balance and visual coherence."
         else:
-            return "Symmetry: Weak or no detectable symmetry. The composition lacks clear symmetrical elements, potentially leading to a less cohesive visual experience."
+            return "Weak or no detectable symmetry. The composition lacks clear symmetrical elements, potentially leading to a less cohesive visual experience."
     else:
-        return "Symmetry: No symmetrical elements detected. The composition does not exhibit any evident symmetry, suggesting a more dynamic or asymmetrical arrangement of elements."
+        return "No symmetrical elements detected. The composition does not exhibit any evident symmetry, suggesting a more dynamic or asymmetrical arrangement of elements."
 
 def detect_balance(image):
     # Convert the image to grayscale
@@ -172,7 +178,7 @@ def evaluate_color_relationships(dominant_colors_hex):
                 contrast_ratios.append(brightness_ratio)
 
         average_contrast_ratio = sum(contrast_ratios) / len(contrast_ratios)
-        feedback = f"Average contrast ratio: {average_contrast_ratio:.2f}\n"
+        feedback = f"\n\nAverage contrast ratio: {average_contrast_ratio:.2f}. The contrast ratio measures the difference in brightness between the foreground and background colors in your artwork. It helps determine the visual clarity and readability of your composition. \n"
 
         if average_contrast_ratio < 1.6:
             feedback += "Consider increasing contrast for stronger visual impact."
@@ -202,12 +208,12 @@ def evaluate_color_relationships(dominant_colors_hex):
             complement_rgb = hls_to_rgb(complement_hue, hls_values[i][1], hls_values[i][2])
             complements.append("#" + "".join(str(int(component)).zfill(2) for component in complement_rgb))
 
-        feedback += f"\nComplementary color pairs:\n{', '.join(complements)}"
+        # feedback += f"\nComplementary color pairs:\n{', '.join(complements)}"
 
         # Color scheme recognition
         color_scheme_info = identify_color_scheme(hls_values)
         if color_scheme_info:
-            feedback += f"\nColor scheme: {color_scheme_info['description']}"
+            feedback += f"\n\nColor scheme: {color_scheme_info['description']}\n"
 
         return feedback
     else:
@@ -269,7 +275,7 @@ def evaluate_color_harmony_advanced(uploaded_file_color):
         pixels = image.reshape((-1, 3))
 
         # Use k-means clustering to find dominant colors
-        num_colors = 5  # You can adjust this based on the desired number of dominant colors
+        num_colors = 5  
         kmeans = KMeans(n_clusters=num_colors)
         kmeans.fit(pixels)
 
@@ -330,7 +336,7 @@ def evaluate_color_distribution(uploaded_file_color):
 
         # Threshold values for hues corresponding to different thirds
         lower_third_hue = 0
-        upper_third_hue = 60  # You may need to adjust this based on your specific use case
+        upper_third_hue = 60  
 
         # Create masks for each third of the image
         mask_lower_third = cv2.inRange(hue_channel, lower_third_hue, upper_third_hue)
@@ -402,64 +408,116 @@ def evaluate_color_temperature(uploaded_file_color):
         return "No image file uploaded for color temperature analysis."
 
 
+
+# Function to extract dominant colors from an image using K-means clustering
+def extract_color_palette(uploaded_file_color, num_colors=5):
+    if uploaded_file_color is not None:
+        # Open the uploaded image file
+        image = cv2.imdecode(np.asarray(bytearray(uploaded_file_color.read()), dtype=np.uint8), 1)
+
+        # Reshape the image to a 2D array of pixels
+        pixels = image.reshape((-1, 3))
+
+        # Use K-means clustering to find dominant colors
+        kmeans = KMeans(n_clusters=num_colors)
+        kmeans.fit(pixels)
+
+        # Get the RGB values of the dominant colors
+        dominant_colors = kmeans.cluster_centers_.astype(int)
+
+        # Convert RGB to hexadecimal for better representation
+        dominant_colors_hex = ['#%02x%02x%02x' % (color[2], color[1], color[0]) for color in dominant_colors]
+
+        return dominant_colors_hex
+    else:
+        return None
+
+# Function to display color palette
+def display_color_palette(palette):
+    for color in palette:
+        st.markdown(f'<div style="width: 30px; height: 30px; background-color: {color};"></div>', unsafe_allow_html=True)
+
+
+# Streamlit app main function
 def main():
+    st.sidebar.title("Analysis Options")
+    selected_feedback = st.sidebar.radio("Select an Option", ["Composition Analysis", "Color Harmony Evaluation", "Color Distribution Analysis", "Color Temperature Analysis", "Color Palette Extractor"])
+
     st.title("Virtual Art Review")
-    # File upload section for composition analysis
     st.subheader("How to Use:")
     st.write("1. Choose an image file for each analysis using the file uploaders below.")
     st.write("2. Once an image is uploaded, the analysis results will be displayed.")
     st.write("3. Review the feedback provided for each analysis to gain insights into your artwork's composition and color aesthetics.")
 
-    st.header("Composition Analysis")
-    st.write("Composition analysis examines the arrangement of elements in your artwork. It evaluates factors such as balance, symmetry, and focal points to provide feedback on the overall layout.")
-    st.write("Rule of Thirds: The rule of thirds is a fundamental principle in visual composition, dividing the image into nine equal parts with two horizontal and two vertical lines. By placing key elements along these lines or at their intersections, you can create a more visually appealing and harmonious composition.")
-        
-    uploaded_file_comp = st.file_uploader("Choose an image for composition analysis", type=["jpg", "jpeg", "png"])
+    if selected_feedback == "Composition Analysis":
+        st.header("Composition Analysis")
+        st.write("Composition analysis examines the arrangement of elements in your artwork. It evaluates factors such as balance, symmetry, and focal points to provide feedback on the overall layout.")
+        uploaded_file = st.file_uploader("Choose an image for analysis", type=["jpg", "jpeg", "png"])
 
-    if uploaded_file_comp is not None:
-        st.image(uploaded_file_comp, caption="Uploaded Image", use_column_width=True)
-        result_comp = analyze_composition(uploaded_file_comp)
-        st.write(result_comp)
-        st.write("*Please note: The feedback provided is objective and based on analysis algorithms. Artists should consider their creative intent when interpreting and acting on the feedback.*")
+        if uploaded_file is not None:
+            st.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
+            result = analyze_composition(uploaded_file)
+            st.write(result)
+            st.write("*Please note: The feedback provided is objective and based on analysis algorithms. Artists should consider their creative intent when interpreting and acting on the feedback.*")
 
+    elif selected_feedback == "Color Harmony Evaluation":
+        st.header("Color Harmony Evaluation")
+        st.write("Color harmony evaluation assesses the color relationships in your artwork.It analyzes factors such as contrast, harmony, and color schemes to provide insights into the visual appeal and coherence of your color palette.")
+        uploaded_file = st.file_uploader("Choose an image for analysis", type=["jpg", "jpeg", "png"])
 
-    # Color harmony evaluation section
-    st.header("Color Harmony Evaluation")
-    st.write("Color harmony evaluation assesses the color relationships in your artwork.It analyzes factors such as contrast, harmony, and color schemes to provide insights into the visual appeal and coherence of your color palette.")
-    uploaded_file_color = st.file_uploader("Choose an image for color harmony evaluation", type=["jpg", "jpeg", "png"])
+        if uploaded_file is not None:
+            st.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
+            result = evaluate_color_harmony_advanced(uploaded_file)
+            st.write(result)
+            st.write("*Please note: The feedback provided is objective and based on analysis algorithms. Artists should consider their creative intent when interpreting and acting on the feedback.*")
 
-    if uploaded_file_color is not None :
-        st.image(uploaded_file_color, caption="Uploaded Image", use_column_width=True)
-        result_color = evaluate_color_harmony_advanced(uploaded_file_color)
-        st.write(result_color)
-        st.write("*Please note: The feedback provided is objective and based on analysis algorithms. Artists should consider their creative intent when interpreting and acting on the feedback.*")
+    elif selected_feedback == "Color Distribution Analysis":
+        st.header("Color Distribution Analysis (Rule of Thirds)")
+        st.write("Color distribution analysis examines how colors are distributed across different sections of your artwork, particularly following the rule of thirds. It provides feedback on the balance and impact of color placement within the composition.")
+        uploaded_file = st.file_uploader("Choose an image for analysis", type=["jpg", "jpeg", "png"])
 
-    
-    # For colour distribution analysis
-    st.header("Color Distribution Analysis (Rule of Thirds)")
-    st.write("Color distribution analysis examines how colors are distributed across different sections of your artwork, particularly following the rule of thirds. It provides feedback on the balance and impact of color placement within the composition.")
-    uploaded_file_color_distribution = st.file_uploader("Choose an image for color distribution analysis", type=["jpg", "jpeg", "png"])
+        if uploaded_file is not None:
+            st.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
+            result = evaluate_color_distribution(uploaded_file)
+            st.write(result)
+            st.write("*Please note: The feedback provided is objective and based on analysis algorithms. Artists should consider their creative intent when interpreting and acting on the feedback.*")
 
-    if uploaded_file_color_distribution is not None:
-        st.image(uploaded_file_color_distribution, caption="Uploaded Image", use_column_width=True)
-        result_color_distribution = evaluate_color_distribution(uploaded_file_color_distribution)
-        st.write(result_color_distribution)
-        st.write("*Please note: The feedback provided is objective and based on analysis algorithms. Artists should consider their creative intent when interpreting and acting on the feedback.*")
+    elif selected_feedback == "Color Temperature Analysis":
+        st.header("Color Temperature Analysis")
+        st.write("Color temperature analysis evaluates the overall warmth or coolness of your artwork's color palette. It helps determine the emotional tone and mood conveyed by the colors used in the composition.")
+        uploaded_file = st.file_uploader("Choose an image for analysis", type=["jpg", "jpeg", "png"])
 
-        
-    # Colour temperature Analysis
-    st.header("Color Temperature Analysis")
-    st.write("Color temperature analysis evaluates the overall warmth or coolness of your artwork's color palette. It helps determine the emotional tone and mood conveyed by the colors used in the composition.")
-    uploaded_file_color_temperature = st.file_uploader("Choose an image for color temperature analysis", type=["jpg", "jpeg", "png"])
+        if uploaded_file is not None:
+            st.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
+            result = evaluate_color_temperature(uploaded_file)
+            st.write(result)
+            st.write("*Please note: The feedback provided is objective and based on analysis algorithms. Artists should consider their creative intent when interpreting and acting on the feedback.*")
 
-    if uploaded_file_color_temperature is not None:
-        st.image(uploaded_file_color_temperature, caption="Uploaded Image", use_column_width=True)
-        result_color_temperature = evaluate_color_temperature(uploaded_file_color_temperature)
-        st.write(result_color_temperature)
-        st.write("*Please note: The feedback provided is objective and based on analysis algorithms. Artists should consider their creative intent when interpreting and acting on the feedback.*")
+    elif selected_feedback == "Color Palette Extractor":
+        st.header("Color Palette Extractor")
+        st.write("Extract dominant colors from your uploaded image.")
+
+        # File uploader for image
+        uploaded_file = st.file_uploader("Choose an image", type=["jpg", "jpeg", "png"])
+
+        # Slider for selecting number of colors in palette
+        num_colors = st.slider("Number of Colors", min_value=3, max_value=10, value=5)
+
+        if uploaded_file is not None:
+            # Display uploaded image
+            st.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
+
+            # Extract color palette
+            colors = extract_color_palette(uploaded_file, num_colors)
+
+            if colors:
+                # Display color palette
+                st.write("Dominant Colors:")
+                display_color_palette(colors)
+            else:
+                st.write("Error extracting colors from the image.")
+
 
 
 if __name__ == "__main__":
     main()
-    
-    
