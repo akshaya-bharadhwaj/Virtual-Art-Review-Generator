@@ -1,5 +1,3 @@
-altair
-base64
 opencv-python-headless
 numpy
 scikit-learn
